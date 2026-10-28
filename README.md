@@ -3,11 +3,7 @@
 A camera-based movement monitoring prototype designed to demonstrate how movement intensity can be monitored around an ICU patient bed and classified into different movement levels.
 
 ## 🌐 Live Prototype
-
-**[Open the Working Smart ICU Patient Bed Safety Prototype]((https://tanmaysharmax8.github.io/PT-248_Prototype_/))**
-
-> Replace the link above with your actual GitHub Pages URL after the prototype has been published.
-
+https://tanmaysharmax8.github.io/PT-248_Prototype_/
 ## 📌 Project Overview
 
 Patient falls in Intensive Care Units (ICUs) are a major patient-safety concern. Continuous manual monitoring can be challenging for healthcare staff, particularly when multiple patients require attention.

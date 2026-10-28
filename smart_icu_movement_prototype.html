@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart ICU Bed Safety — Movement Monitoring Prototype</title>
+<style>
+:root{font-family:Arial,Helvetica,sans-serif;color:#172033;background:#f4f7fb}
+*{box-sizing:border-box}body{margin:0;padding:20px}
+main{max-width:1100px;margin:auto}
+header{background:#14243a;color:white;padding:22px 24px;border-radius:16px;margin-bottom:18px}
+h1{font-size:clamp(1.35rem,3vw,2rem);margin:0 0 8px}header p{margin:0;color:#d8e4f4;line-height:1.5}
+.layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:18px}
+.card{background:white;border:1px solid #e2e8f0;border-radius:15px;padding:18px;box-shadow:0 4px 16px #16233a0a}
+h2{font-size:1.08rem;margin:0 0 14px}.video-wrap{background:#101722;border-radius:10px;overflow:hidden;aspect-ratio:16/9;display:grid;place-items:center}
+video{display:block;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.placeholder{color:#d3dbe7;text-align:center;padding:20px;line-height:1.5}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}
+button{border:0;border-radius:9px;padding:11px 15px;font-weight:700;cursor:pointer;background:#175cd3;color:white}
+button.secondary{background:#e8eef7;color:#172033}button:disabled{opacity:.5;cursor:not-allowed}
+.status{display:flex;align-items:center;gap:10px;padding:14px;border-radius:11px;margin-bottom:14px;background:#edf2f7}
+.dot{width:13px;height:13px;border-radius:50%;background:#64748b;flex:none}
+.status strong{font-size:1.25rem}.status small{display:block;margin-top:4px;color:#536176;line-height:1.4}
+.low{background:#e9f8ef}.low .dot{background:#16803d}
+.medium{background:#fff5d9}.medium .dot{background:#c17a00}
+.high{background:#ffebeb}.high .dot{background:#c62828}
+.metric{display:flex;justify-content:space-between;gap:10px;margin:13px 0 7px;font-size:.92rem}
+.track{height:10px;border-radius:99px;background:#e8edf4;overflow:hidden}.bar{height:100%;width:0;background:#175cd3;transition:width .15s}
+.note{font-size:.88rem;color:#536176;line-height:1.55}
+.log{max-height:190px;overflow:auto;padding-left:20px;font-size:.9rem;line-height:1.6}
+footer{margin-top:18px}
+.warning{border-left:4px solid #c17a00;background:#fff8e6;padding:13px 15px;border-radius:8px;font-size:.9rem;line-height:1.55}
+label{font-size:.9rem;display:block;margin:14px 0 6px}input[type=range]{width:100%}
+@media(max-width:760px){body{padding:12px}.layout{grid-template-columns:1fr}header{padding:18px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Smart ICU Patient Bed Safety</h1>
+<p>Camera-based movement monitoring · Academic working prototype</p>
+</header>
+<div class="layout">
+<section class="card">
+<h2>Live camera feed</h2>
+<div class="video-wrap" id="videoWrap">
+<div class="placeholder" id="placeholder">Camera is off.<br>Press “Start camera” and allow browser camera access.</div>
+<video id="video" autoplay muted playsinline hidden></video>
+</div>
+<div class="controls">
+<button id="start">Start camera</button>
+<button class="secondary" id="stop" disabled>Stop camera</button>
+<button class="secondary" id="reset">Reset baseline</button>
+</div>
+<p class="note">For best results, keep the camera fixed and the monitored area consistently lit. The prototype compares consecutive frames to estimate movement.</p>
+</section>
+<section class="card">
+<h2>Movement assessment</h2>
+<div id="status" class="status">
+<span class="dot"></span><div><strong id="riskText">Waiting for camera</strong><small id="riskDesc">Start the camera to begin monitoring.</small></div>
+</div>
+<div class="metric"><span>Movement score</span><strong id="scoreText">0 / 100</strong></div>
+<div class="track"><div class="bar" id="bar"></div></div>
+<div class="metric"><span>Recent movement</span><strong id="movementText">Not measured</strong></div>
+<div class="metric"><span>High movement duration</span><strong id="durationText">0 sec</strong></div>
+<label for="mediumThreshold">Medium movement threshold: <strong id="mediumValue">18</strong></label>
+<input id="mediumThreshold" type="range" min="5" max="45" value="18">
+<label for="highThreshold">High movement threshold: <strong id="highValue">38</strong></label>
+<input id="highThreshold" type="range" min="20" max="80" value="38">
+<p class="note">Risk labels here are heuristic movement levels, not a medical fall-risk prediction. Camera movement, lighting changes, visitors, or bedding motion may trigger alerts.</p>
+</section>
+<section class="card">
+<h2>Event log</h2>
+<p class="note">Risk-level changes are logged locally in this page. No video is uploaded or saved by this prototype.</p>
+<ol id="log" class="log"><li>Prototype ready. Camera has not started.</li></ol>
+<button class="secondary" id="clearLog">Clear log</button>
+</section>
+<section class="card">
+<h2>How this prototype works</h2>
+<ol class="note">
+<li>Requests access to the device camera.</li>
+<li>Measures pixel differences between consecutive video frames.</li>
+<li>Converts the movement estimate into a score from 0–100.</li>
+<li>Shows Low, Medium, or High movement level and logs changes.</li>
+</ol>
+<div class="warning"><strong>Safety limitation:</strong> Movement intensity alone cannot determine whether a patient is about to fall or has exited the bed. This prototype is for demonstration only and must not be used for clinical decisions or replace staff supervision.</div>
+</section>
+</div>
+<footer class="note">Tip: Use Chrome or Edge on localhost/HTTPS. Camera access may be blocked when opening a file directly; if so, run a local web server in the folder with <code>python -m http.server 8000</code> and open <code>http://localhost:8000</code>.</footer>
+</main>
+<canvas id="canvas" width="160" height="90" hidden></canvas>
+<script>
+const video=document.getElementById('video'), canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d',{willReadFrequently:true});
+const startBtn=document.getElementById('start'), stopBtn=document.getElementById('stop');
+const statusBox=document.getElementById('status'), riskText=document.getElementById('riskText'), riskDesc=document.getElementById('riskDesc');
+const scoreText=document.getElementById('scoreText'), bar=document.getElementById('bar'), movementText=document.getElementById('movementText'), durationText=document.getElementById('durationText');
+const mediumInput=document.getElementById('mediumThreshold'), highInput=document.getElementById('highThreshold');
+let stream=null, previous=null, raf=null, lastRisk='', highSince=null, lastLog=0, active=false, smoothScore=0, lastFrame=0;
+function logEvent(msg){const li=document.createElement('li');li.textContent=new Date().toLocaleTimeString()+' — '+msg;const log=document.getElementById('log');log.prepend(li);while(log.children.length>50)log.lastChild.remove();}
+function riskFor(score){
+ let m=Number(mediumInput.value), h=Number(highInput.value); if(h<=m) h=m+1;
+ if(score>=h) return 'High'; if(score>=m) return 'Medium'; return 'Low';
+}
+function updateRisk(risk,score){
+ statusBox.className='status '+risk.toLowerCase();riskText.textContent=risk+' movement level';
+ const descriptions={Low:'Little movement detected in the monitored frame.',Medium:'Moderate movement detected. Review the live feed.',High:'Strong movement detected. Check the live feed and patient context.'};
+ riskDesc.textContent=descriptions[risk];scoreText.textContent=Math.round(score)+' / 100';bar.style.width=Math.min(100,score)+'%';
+ if(risk==='High'){if(highSince===null)highSince=Date.now();durationText.textContent=Math.floor((Date.now()-highSince)/1000)+' sec';}
+ else {highSince=null;durationText.textContent='0 sec';}
+ if(risk!==lastRisk){logEvent(risk+' movement level detected (score '+Math.round(score)+')');lastRisk=risk;}
+}
+function frame(){
+ if(!active||video.readyState<2){raf=requestAnimationFrame(frame);return;}
+ // Sample a small frame to keep processing light.
+ ctx.drawImage(video,0,0,canvas.width,canvas.height);
+ const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+ if(previous){
+   let diff=0, count=0;
+   // Compare grayscale values; skip pixels to reduce CPU load.
+   for(let i=0;i<pixels.length;i+=16){
+     const cur=(pixels[i]*.299+pixels[i+1]*.587+pixels[i+2]*.114);
+     const old=(previous[i]*.299+previous[i+1]*.587+previous[i+2]*.114);
+     diff+=Math.abs(cur-old);count++;
+   }
+   const raw=Math.min(100,(diff/count)*1.55);
+   smoothScore=smoothScore*.72+raw*.28;
+   movementText.textContent=smoothScore<Number(mediumInput.value)?'Low':smoothScore<Number(highInput.value)?'Moderate':'Strong';
+   updateRisk(riskFor(smoothScore),smoothScore);
+ }
+ previous=new Uint8ClampedArray(pixels);raf=requestAnimationFrame(frame);
+}
+startBtn.addEventListener('click',async()=>{
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+  video.srcObject=stream;video.hidden=false;document.getElementById('placeholder').hidden=true;
+  active=true;previous=null;smoothScore=0;lastRisk='';startBtn.disabled=true;stopBtn.disabled=false;
+  logEvent('Camera monitoring started');raf=requestAnimationFrame(frame);
+ }catch(e){alert('Could not access camera. Please allow camera permission and use HTTPS or localhost. Details: '+e.message);}
+});
+function stopCamera(){
+ active=false;if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;video.hidden=true;document.getElementById('placeholder').hidden=false;document.getElementById('placeholder').innerHTML='Camera is off.<br>Press “Start camera” to resume.';startBtn.disabled=false;stopBtn.disabled=true;previous=null;logEvent('Camera monitoring stopped');riskText.textContent='Monitoring stopped';riskDesc.textContent='Start the camera to continue.';statusBox.className='status';}
+stopBtn.addEventListener('click',stopCamera);
+document.getElementById('reset').addEventListener('click',()=>{previous=null;smoothScore=0;highSince=null;durationText.textContent='0 sec';logEvent('Movement baseline reset');});
+mediumInput.addEventListener('input',()=>{document.getElementById('mediumValue').textContent=mediumInput.value;if(Number(highInput.value)<=Number(mediumInput.value)){highInput.value=Number(mediumInput.value)+1;document.getElementById('highValue').textContent=highInput.value;}});
+highInput.addEventListener('input',()=>{if(Number(highInput.value)<=Number(mediumInput.value)){highInput.value=Number(mediumInput.value)+1;}document.getElementById('highValue').textContent=highInput.value;});
+document.getElementById('clearLog').addEventListener('click',()=>{document.getElementById('log').innerHTML='';logEvent('Event log cleared');});
+window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());});
+</script>
+</body>
+</html>
